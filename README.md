@@ -1,15 +1,15 @@
-# The Last-Level Branch Predictor Simulator
+# LLBP-X: The Last-Level Branch Predictor Revisited Artifact
 
 <p align="left">
-    <a href="https://github.com/dhschall/LLBP/blob/main/LICENSE">
+    <a href="https://github.com/dhschall/LLBP-X/blob/main/LICENSE">
         <img alt="GitHub" src="https://img.shields.io/badge/License-MIT-yellow.svg">
     </a>
-    <a href="https://github.com/dhschall/LLBP/releases">
-        <img alt="GitHub release" src="https://img.shields.io/github/v/release/dhschall/LLBP">
+    <a href="https://github.com/dhschall/LLBP-X/releases">
+        <img alt="GitHub release" src="https://img.shields.io/github/v/release/dhschall/LLBP-X">
     </a>
     <a href="https://doi.org/10.5281/zenodo.13197409"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.13197409.svg" alt="Trace DOI"></a>
-    <a href="https://github.com/dhschall/LLBP/actions/workflows/build-and-run.yml">
-        <img alt="Build and test" src="https://github.com/dhschall/LLBP/actions/workflows/build-and-run.yml/badge.svg">
+    <a href="https://github.com/dhschall/LLBP-X/actions/workflows/build-and-run.yml">
+        <img alt="Build and test" src="https://github.com/dhschall/LLBP-X/actions/workflows/build-and-run.yml/badge.svg">
     </a>
 
 </p>
