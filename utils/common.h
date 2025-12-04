@@ -10,6 +10,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
+#include <stdint.h>
 
 using namespace std;
 

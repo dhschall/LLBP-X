@@ -158,7 +158,7 @@ void TageBase::reinit() {
         use_alt_on_na[i] = 0;
     }
 
-    // ptghist = 0;
+    ptghist = 0;
     phist = 0;
 }
 
@@ -294,6 +294,7 @@ int TageBase::MYRANDOM() {
     Seed++;
     Seed ^= phist;
     Seed = (Seed >> 21) + (Seed << 11);
+    Seed ^= ptghist;
     Seed = (Seed >> 10) + (Seed << 22);
     return (Seed);
 };
@@ -476,6 +477,7 @@ void TageBase::updateGHist(const bool bit) {
         tag1FHist[i]->update();
         tag2FHist[i]->update();
     }
+    ptghist--;
 }
 
 
@@ -695,7 +697,7 @@ bool TageBase::tageUpdate(uint64_t pc, bool resolveDir) {
         // Do the actual counter update
         ctrupdate(HitEntry->ctr, resolveDir, cwidth);
         // sign changes: no way it can have been useful
-        if (HitEntry->ctr == (resolveDir ? 0 : -1)) {
+        if (abs (2 * HitEntry->ctr + 1) == 1) {
             HitEntry->u = 0;
         }
 

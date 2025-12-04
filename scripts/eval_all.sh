@@ -53,7 +53,7 @@ TRACES="${TRACES} whiskey.426708"
 
 
 TRACE_DIR="./traces"
-
+TRACE_DIR="/disk/local/home/dschall/llbp/tracess/"
 
 cmake --build ./build --target predictor -j $(nproc)
 
@@ -67,7 +67,7 @@ d1M=1000000
 
 
 N_WARM=$(( 100 * $d1M ))
-N_SIM=$(( 500 * $d1M ))
+N_SIM=$(( 200 * $d1M ))
 
 
 
@@ -79,6 +79,8 @@ FLAGS="${FLAGS} --simulate-btb"
 BRMODELS=""
 BRMODELS="${BRMODELS} llbp"
 BRMODELS="${BRMODELS} llbp-timing"
+BRMODELS="${BRMODELS} llbpx"
+BRMODELS="${BRMODELS} llbpx-timing"
 BRMODELS="${BRMODELS} tage64kscl"
 BRMODELS="${BRMODELS} tage512kscl"
 

@@ -5,6 +5,7 @@
 #include "tage/tage.h"
 #include "tage/tage_scl.h"
 #include "llbp/llbp.h"
+#include "llbpx/llbpx.h"
 
 
 BasePredictor* CreateBP(std::string bp_name)
@@ -19,6 +20,10 @@ BasePredictor* CreateBP(std::string bp_name)
         return new LLBP::LLBPTageSCL64k();
     } else if (bp_name == "llbp-timing") {
         return new LLBP::LLBPTageSCL64kTiming();
+    } else if (bp_name == "llbpx") {
+        return new LLBP::LLBPXTSCL64k();
+    } else if (bp_name == "llbpx-timing") {
+        return new LLBP::LLBPXTSCL64kTiming();
     } else {
         std::cout << "Wrong BP name: " << bp_name << std::endl;
         exit(EXIT_FAILURE);

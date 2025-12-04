@@ -7,6 +7,7 @@ set(SOURCES
     tage/tage.cc
     tage/tage_scl.cc
     llbp/llbp.cc
+    llbpx/llbpx.cc
 )
 
 add_library(bpmodels STATIC ${SOURCES})

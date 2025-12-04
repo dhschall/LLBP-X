@@ -14,6 +14,7 @@ _deps
 
 build/
 results/
+gem5/
 
 
 *.pred

@@ -21,7 +21,7 @@
  * SOFTWARE.
  *
  */
-
+#pragma once
 
 template <typename key_t, typename value_t>
 class BaseCache {
@@ -100,6 +100,19 @@ class BaseCache {
         }
         auto& set = getSet(key);
         set.splice(set.begin(), set, it->second);
+    }
+
+    void bump(const key_t& key, bool front=true) {
+        auto it = _index.find(key);
+        if (it == _index.end()) {
+            return;
+        }
+        auto& set = getSet(key);
+        if (front) {
+            set.splice(set.begin(), set, it->second);
+        } else {
+            set.splice(set.end(), set, it->second);
+        }
     }
 
     bool exists(const key_t& key) const {

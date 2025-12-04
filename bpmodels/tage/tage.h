@@ -170,7 +170,7 @@ class TageBase : public BasePredictor {
     int AltBank;  // alternate matching bank
     Gentry* HitEntry;  // pointer to the HitBank entry
     Gentry* AltEntry;  // pointer to the AltBank entry
-    int Seed;     // for the pseudo-random number generator
+    int Seed, ptghist;     // for the pseudo-random number generator
     bool pred_inter;
     enum {
         BASE    = 0b001,
