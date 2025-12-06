@@ -50,7 +50,7 @@ The infrastructure and following commands have been tested with the following sy
 
 ```bash
 # Install cmake
-sudo apt install -y cmake libboost-all-dev build-essential pip parallel
+sudo apt install -y cmake libboost-all-dev build-essential pip parallel wget
 
 # Python dependencies for plotting.
 pip install -r analysis/requirements.txt
