@@ -53,7 +53,6 @@ TRACES="${TRACES} whiskey.426708"
 
 
 TRACE_DIR="./traces"
-TRACE_DIR="/disk/local/home/dschall/llbp/tracess/"
 
 cmake --build ./build --target predictor -j $(nproc)
 
