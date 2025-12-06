@@ -42,7 +42,7 @@ for model in $BRMODELS; do
     ## Create output directory
     OUTDIR="${OUT}/${model}/"
 
-    ./build/ARM/gem5.opt --outdir=$OUTDIR se-llbp.py --bp=$model
+    ./gem5/build/ARM/gem5.opt --outdir=$OUTDIR scripts/se-llbp.py --bp=$model
 
 done
 
