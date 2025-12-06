@@ -44,5 +44,8 @@ git checkout 51759b538e1d1268acf3b3a09057be13b85a3c3e
 # Copy and override the LLBP-X models into the gem5 source tree
 cp -r ../gem5models/* src/cpu/pred/
 
+# Apply patch
+git apply ../scripts/llbpx.patch
+
 # Build gem5
 scons build/ARM/gem5.opt --ignore-style -j `nproc`

@@ -23,7 +23,7 @@
 # SOFTWARE.
 
 
-set -x -e
+set -e
 
 
 

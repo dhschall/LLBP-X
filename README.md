@@ -65,9 +65,8 @@ mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 cd ..
-
+# Build the simulator
 cmake --build ./build -j 8
-
 ```
 
 ### Server traces
@@ -120,22 +119,20 @@ To simulate LLBP-X in gem5, you need to have gem5 cloned with all its prerequisi
 
 
 ### Integrate and build LLBP-X in gem5
-To integrate LLBP-X into gem5, copy the contents of the `gem5models` folder into the `src/cpu/pred` directory of your gem5 installation. This will add the LLBP-X implementation to gem5 and override some of the existing TAGE-SC-L files and the SConscript file to include the new files. Then rebuild gem5.
+To integrate LLBP-X into gem5, copy the contents of the `gem5models` folder into the `src/cpu/pred` directory of your gem5 installation. Furthermore, apply the patch `./scripts/llbpx.patch` which updates the SCons scripts and the TAGE-SC-L models to enable the integration. Then rebuild gem5.
 > Note you can use the provided `./scripts/setup_gem5.sh` script which will clone gem5, checkout a compatible commit, copy the LLBP-X files, and build gem5 for you.
-
-```bash
-cp -r gem5models/* <path-to-gem5>/src/cpu/pred/
-cd <path-to-gem5>/
-scons build/ARM/gem5.opt -j`nproc`
-```
-
-Alternatively, you can use the provided patch file `gem5_llbp_x.patch` to apply the changes to your gem5 installation:
+> The model is compatible with gem5 version v25.1.0.0 and later.
 
 ```bash
 cd <path-to-gem5>/
-git apply ../scripts/gem5_llbp_x.patch
+# Copy LLBP-X files
+cp -r <path/to/LLBP-X>/gem5models/* src/cpu/pred/
+# Apply patch
+git apply <path/to/LLBP-X>/scripts/llbpx.patch
+# Build gem5
 scons build/ARM/gem5.opt -j`nproc`
 ```
+
 
 ### Run LLBP-X in gem5
 
@@ -143,7 +140,7 @@ The `scripts` folder contains a simple configuration script (`se-llbp.py`) to ru
 
 ```bash
 ./build/ARM/gem5.opt ./../scripts/se-llbp.py --bp=LLBPX
-``` 
+```
 This will run the hello world program with LLBP-X as the branch predictor. Can change the `--bp` argument to `LLBPX`, `LLBP`, or `TSL64k` to simulate the other branch predictor models.
 
 To quickly run all models and collect the branch mispredictions run:

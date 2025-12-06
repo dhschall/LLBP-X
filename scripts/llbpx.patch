@@ -1,0 +1,605 @@
+diff --git a/src/cpu/pred/BranchPredictor.py b/src/cpu/pred/BranchPredictor.py
+index 956153a972..d8103a6e72 100644
+--- a/src/cpu/pred/BranchPredictor.py
++++ b/src/cpu/pred/BranchPredictor.py
+@@ -704,6 +704,12 @@ class TAGE_SC_L(LTAGE):
+     statistical_corrector = Param.StatisticalCorrector(
+         "Statistical Corrector. Set to NULL to disable it"
+     )
++    loop_enabled = Param.Bool(
++        True, "Use the loop predictor in the branch predictor"
++    )
++    sc_enabled = Param.Bool(
++        True, "Use the sc predictor in the branch predictor"
++    )
+
+
+ class TAGE_SC_L_64KB_LoopPredictor(TAGE_SC_L_LoopPredictor):
+@@ -817,6 +823,91 @@ class TAGE_SC_L_8KB(TAGE_SC_L):
+     statistical_corrector = TAGE_SC_L_8KB_StatisticalCorrector()
+
+
++# The last-level branch predictor (LLBP) as described in
++# https://dhschall.github.io/assets/pdf/LLBP_MICRO24.pdf
++class LLBP_TAGE_64KB(TAGE_SC_L_TAGE_64KB):
++    type = "LLBP_TAGE_64KB"
++    cxx_class = "gem5::branch_prediction::LLBP_TAGE_64KB"
++    cxx_header = "cpu/pred/llbp.hh"
++
++class LLBP(ConditionalPredictor):
++    type = "LLBP"
++    cxx_class = "gem5::branch_prediction::LLBP"
++    cxx_header = "cpu/pred/llbp.hh"
++
++    clk_domain = Param.ClockDomain(Parent.clk_domain, "Clock domain")
++
++    base = Param.TAGE_SC_L("Base predictor")
++    disableOverride = Param.Bool(
++        False,
++        "Whether to override the base predictor (Basically disables LLBP)",
++    )
++
++    rcrType = Param.Int(3, "RCR Type of Branches to hash")
++    rcrWindow = Param.Int(8, "RCR Number of Branches to hash")
++    rcrDist = Param.Int(4, "RCR Number of Branches to skip")
++    rcrShift = Param.Int(1, "RCR Number of bits to shift PC by")
++    rcrTagWidth = Param.Int(14, "RCR Tag Width")
++    rcrBaseTagWidth = Param.Int(16, "RCR Base Tag Width")
++
++    backingStorageCapacity = Param.Int(
++        14*1024, "Backing Storage Capacity (in number of contexts)"
++    )
++    backingStorageAssoc = Param.Int(
++        7, "Backing Storage associativity (in number of contexts)"
++    )
++    backingStorageLatency = Param.Cycles(6, "Backing Storage Latency")
++
++    patternSetCapacity = Param.Int(
++        64, "Pattern Set Capacity (>> base numTables) [0 for infinite]"
++    )
++    patternSetAssoc = Param.Int(
++        4, "Pattern Set Associativity [ignored if cap = 0]"
++    )
++    patterTagBits = Param.Int(13, "Number of bits in the pattern tag (TTWidth)")
++
++    patternBufferCapacity = Param.Int(
++        64, "Pattern Buffer Capacity (in number of contexts)"
++    )
++    patternBufferAssoc = Param.Int(4, "Pattern Buffer Associativity")
++
++    patternCounterWidth = Param.Int(3, "Bits in Pattern Direction Counter")
++    contextCounterWidth = Param.Int(2, "Bits in Context Replacement Counter")
++
++    unlimited = Param.Bool(
++        False,
++        "Use this flag to simulate large number of pattern sets and contexts "
++        "together with setting pattern set and backing storage capacity "
++        "to a large value",
++    )
++    optimalPrefetching = Param.Bool(False, "Enable optimal prefeching")
++
++    # LLBP-X Functionality
++    adaptCtxDepth = Param.Bool(False, "Enable context depth adaption")
++    citCapacity = Param.Int(
++        64, "CTT Capacity (in number of contexts)"
++    )
++    citAssoc = Param.Int(4, "CTT Associativity")
++
++class LLBPInf(LLBP):
++    backingStorageCapacity=1000000
++    backingStorageAssoc=1000000
++    patterTagBits = 20
++    patternSetCapacity=1000000
++    patternSetAssoc=1000000
++    unlimited=True
++
++
++# The last-level branch predictor (LLBP) revisited as described in
++# https://dhschall.github.io/assets/pdf/LLBPX_HPCA26.pdf
++class LLBPX(LLBP):
++    rcrBaseTagWidth=16
++    contextCounterWidth=3
++    adaptCtxDepth = True
++    citCapacity = 6*1024
++    citAssoc = 6
++
++
+ class MultiperspectivePerceptron(ConditionalPredictor):
+     type = "MultiperspectivePerceptron"
+     cxx_class = "gem5::branch_prediction::MultiperspectivePerceptron"
+diff --git a/src/cpu/pred/SConscript b/src/cpu/pred/SConscript
+index 1f49830fc9..165fa508c9 100644
+--- a/src/cpu/pred/SConscript
++++ b/src/cpu/pred/SConscript
+@@ -51,6 +51,7 @@ SimObject('BranchPredictor.py',
+     'LocalBP', 'TournamentBP', 'BiModeBP', 'TAGEBase', 'TAGE', 'LoopPredictor',
+     'TAGE_SC_L_TAGE', 'TAGE_SC_L_TAGE_64KB', 'TAGE_SC_L_TAGE_8KB',
+     'LTAGE', 'TAGE_SC_L_LoopPredictor', 'StatisticalCorrector', 'TAGE_SC_L',
++    'LLBP', 'LLBP_TAGE_64KB',
+     'TAGE_SC_L_64KB_StatisticalCorrector',
+     'TAGE_SC_L_8KB_StatisticalCorrector',
+     'TAGE_SC_L_64KB', 'TAGE_SC_L_8KB', 'MultiperspectivePerceptron',
+@@ -74,6 +75,7 @@ Source('tage_base.cc')
+ Source('tage.cc')
+ Source('loop_predictor.cc')
+ Source('ltage.cc')
++Source('llbp.cc')
+ Source('multiperspective_perceptron.cc')
+ Source('multiperspective_perceptron_8KB.cc')
+ Source('multiperspective_perceptron_64KB.cc')
+@@ -95,3 +97,4 @@ DebugFlag('Branch')
+ DebugFlag('Tage')
+ DebugFlag('LTage')
+ DebugFlag('TageSCL')
++DebugFlag('LLBP')
+diff --git a/src/cpu/pred/tage.hh b/src/cpu/pred/tage.hh
+index 6c5a376ffb..fdb33c8c35 100644
+--- a/src/cpu/pred/tage.hh
++++ b/src/cpu/pred/tage.hh
+@@ -76,9 +76,11 @@ namespace branch_prediction
+
+ class TAGE: public ConditionalPredictor
+ {
+-  protected:
++  public:
+     TAGEBase *tage;
+
++  protected:
++
+     Random::RandomPtr rng = Random::genRandom();
+
+     struct TageBranchInfo
+@@ -104,15 +106,24 @@ class TAGE: public ConditionalPredictor
+
+     // Base class methods.
+     bool lookup(ThreadID tid, Addr pc, void* &bp_history) override;
+-    void updateHistories(ThreadID tid, Addr pc, bool uncond,
++    virtual void updateHistories(ThreadID tid, Addr pc, bool uncond,
+                          bool taken, Addr target, const StaticInstPtr &inst,
+                          void * &bp_history) override;
+     void update(ThreadID tid, Addr pc, bool taken, void * &bp_history,
+                 bool squashed, const StaticInstPtr &inst,
+                 Addr target) override;
+-    void squash(ThreadID tid, void * &bp_history) override;
+-    void branchPlaceholder(ThreadID tid, Addr pc,
++    virtual void squash(ThreadID tid, void * &bp_history) override;
++    virtual void branchPlaceholder(ThreadID tid, Addr pc,
+                            bool uncond, void * &bp_history) override;
++
++    unsigned int getNumHistoryTables() const
++    {
++        return tage->nHistoryTables;
++    }
++
++    uint16_t gtag(ThreadID tid, Addr pc, int bank) const {
++        return tage->gtag(tid, pc, bank);
++    }
+ };
+
+ } // namespace branch_prediction
+diff --git a/src/cpu/pred/tage_base.cc b/src/cpu/pred/tage_base.cc
+index 17e713a8a1..a453868d67 100644
+--- a/src/cpu/pred/tage_base.cc
++++ b/src/cpu/pred/tage_base.cc
+@@ -481,9 +481,10 @@ TAGEBase::handleAllocAndUReset(bool alloc, bool taken, BranchInfo* bi,
+         //Allocate entries
+         unsigned numAllocated = 0;
+         for (int i = X; i <= nHistoryTables; i++) {
+-            if (gtable[i][bi->tableIndices[i]].u == 0) {
+-                gtable[i][bi->tableIndices[i]].tag = bi->tableTags[i];
+-                gtable[i][bi->tableIndices[i]].ctr = (taken) ? 0 : -1;
++            if (allocateEntry(i, bi, taken)) {
++                DPRINTF(Tage, "Allocate for %llx: i:%i Tidx:%i, Ttag:%x\n",
++                    bi->branchPC, i, bi->tableIndices[i], bi->tableTags[i]);
++
+                 ++numAllocated;
+                 if (numAllocated == maxNumAlloc) {
+                     break;
+@@ -497,6 +498,17 @@ TAGEBase::handleAllocAndUReset(bool alloc, bool taken, BranchInfo* bi,
+     handleUReset();
+ }
+
++int
++TAGEBase::allocateEntry(int idx, BranchInfo* bi, bool taken)
++{
++    if (gtable[idx][bi->tableIndices[idx]].u != 0)
++        return 0;
++
++    gtable[idx][bi->tableIndices[idx]].tag = bi->tableTags[idx];
++    gtable[idx][bi->tableIndices[idx]].ctr = (taken) ? 0 : -1;
++    return 1;
++}
++
+ void
+ TAGEBase::handleUReset()
+ {
+diff --git a/src/cpu/pred/tage_base.hh b/src/cpu/pred/tage_base.hh
+index 872ee0a4c4..2dfb98a12d 100644
+--- a/src/cpu/pred/tage_base.hh
++++ b/src/cpu/pred/tage_base.hh
+@@ -396,7 +396,7 @@ class TAGEBase : public SimObject
+      * @param cond_branch True if the branch is conditional.
+      * @param bi Pointer to the BranchInfo
+      */
+-    bool tagePredict(
++    virtual bool tagePredict(
+         ThreadID tid, Addr branch_pc, bool cond_branch, BranchInfo* bi);
+
+     /**
+@@ -460,6 +460,12 @@ class TAGEBase : public SimObject
+      */
+     virtual void resetUctr(uint8_t & u);
+
++    /**
++     * Try to allocate an entry at index idx.
++     * Returns true if the allocation was successful
++    */
++    virtual int allocateEntry(int idx, BranchInfo* bi, bool taken = false);
++
+     /**
+      * Extra steps for calculating altTaken
+      * For this base TAGE class it does nothing
+@@ -480,7 +486,6 @@ class TAGEBase : public SimObject
+     bool isSpeculativeUpdateEnabled() const;
+     size_t getSizeInBits() const;
+
+-  protected:
+     const unsigned logRatioBiModalHystEntries;
+     const unsigned nHistoryTables;
+     const unsigned tagTableCounterBits;
+@@ -490,6 +495,7 @@ class TAGEBase : public SimObject
+     const unsigned maxHist;
+     const unsigned pathHistBits;
+
++  protected:
+     std::vector<unsigned> tagTableTagWidths;
+     std::vector<int> logTagTableSizes;
+
+@@ -540,11 +546,14 @@ class TAGEBase : public SimObject
+     /** Use taken only history. */
+     const bool takenOnlyHistory;
+
++  public:
+     // Tells which tables are active
+     // (for the base TAGE implementation all are active)
+     // Some other classes use this for handling associativity
+     std::vector<bool> noSkip;
+
++  protected:
++
+     const bool speculativeHistUpdate;
+
+     const unsigned instShiftAmt;
+diff --git a/src/cpu/pred/tage_sc_l.cc b/src/cpu/pred/tage_sc_l.cc
+index 4c0506285f..e977d83491 100644
+--- a/src/cpu/pred/tage_sc_l.cc
++++ b/src/cpu/pred/tage_sc_l.cc
+@@ -77,7 +77,8 @@ TAGE_SC_L_LoopPredictor::optionalAgeInc() const
+ }
+
+ TAGE_SC_L::TAGE_SC_L(const TAGE_SC_LParams &p)
+-  : LTAGE(p), statisticalCorrector(p.statistical_corrector)
++  : LTAGE(p), statisticalCorrector(p.statistical_corrector),
++    useLoop(p.loop_enabled), useSC(p.sc_enabled)
+ {
+ }
+
+@@ -179,6 +180,9 @@ TAGE_SC_L_TAGE::calculateIndicesAndTags(
+             t = t % shortTagsTageFactor;
+         }
+     }
++
++    // TODO: Test with and without this. Probably needed for decoupled FE
++    bi->valid = true;
+ }
+
+ unsigned
+@@ -412,9 +416,11 @@ TAGE_SC_L::predict(ThreadID tid, Addr pc, bool cond_branch, void* &b)
+
+     bool pred_taken = tage->tagePredict(tid, pc, cond_branch,
+                                         bi->tageBranchInfo);
+-    pred_taken = loopPredictor->loopPredict(tid, pc, cond_branch,
+-                                            bi->lpBranchInfo, pred_taken,
+-                                            instShiftAmt);
++    if (useLoop) {
++        pred_taken = loopPredictor->loopPredict(tid, pc, cond_branch,
++                                                bi->lpBranchInfo, pred_taken,
++                                                instShiftAmt);
++    }
+
+     if (bi->lpBranchInfo->loopPredUsed) {
+         bi->tageBranchInfo->provider = LOOP;
+@@ -429,7 +435,7 @@ TAGE_SC_L::predict(ThreadID tid, Addr pc, bool cond_branch, void* &b)
+     bi->scBranchInfo->altConf = tage_scl_bi->altConf;
+     bi->scBranchInfo->medConf = tage_scl_bi->medConf;
+
+-    if (statisticalCorrector) {
++    if (useSC) {
+         bool use_tage_ctr = bi->tageBranchInfo->hitBank > 0;
+         int8_t tage_ctr = use_tage_ctr ?
+             tage->getCtr(tage_scl_bi->hitBank, tage_scl_bi->hitBankIndex) : 0;
+@@ -464,6 +470,21 @@ TAGE_SC_L::update(ThreadID tid, Addr pc, bool taken, void *&bp_history,
+     assert(bp_history);
+
+     TageSCLBranchInfo* bi = static_cast<TageSCLBranchInfo*>(bp_history);
++    update(tid, pc, taken, bi, squashed, inst, target);
++
++    if (squashed)
++        return;
++
++    delete bi;
++    bp_history = nullptr;
++}
++
++void
++TAGE_SC_L::update(ThreadID tid, Addr pc, bool taken, TageSCLBranchInfo *&bi,
++                  bool squashed, const StaticInstPtr & inst, Addr target)
++{
++    assert(bi);
++
+     TAGE_SC_L_TAGE::BranchInfo* tage_bi =
+         static_cast<TAGE_SC_L_TAGE::BranchInfo *>(bi->tageBranchInfo);
+
+@@ -472,10 +493,10 @@ TAGE_SC_L::update(ThreadID tid, Addr pc, bool taken, void *&bp_history,
+             // This restores the global history, then update it
+             // and recomputes the folded histories.
+             tage->squash(tid, taken, target, inst, tage_bi);
+-            if (bi->tageBranchInfo->condBranch) {
++            if (useLoop && bi->tageBranchInfo->condBranch) {
+                 loopPredictor->squashLoop(bi->lpBranchInfo);
+             }
+-            if (statisticalCorrector) {
++            if (useSC) {
+                 statisticalCorrector->updateHistories(pc, true, inst, taken,
+                                                       bi->scBranchInfo, target,
+                                                       tage->getPathHist(tid));
+@@ -490,9 +511,10 @@ TAGE_SC_L::update(ThreadID tid, Addr pc, bool taken, void *&bp_history,
+                 pc, taken);
+         tage->updateStats(taken, bi->tageBranchInfo);
+
+-        loopPredictor->updateStats(taken, bi->lpBranchInfo);
++        if (useLoop)
++            loopPredictor->updateStats(taken, bi->lpBranchInfo);
+
+-        if (statisticalCorrector) {
++        if (useSC) {
+             statisticalCorrector->updateStats(taken, bi->scBranchInfo);
+
+             bool bias = (bi->tageBranchInfo->longestMatchPred !=
+@@ -505,9 +527,9 @@ TAGE_SC_L::update(ThreadID tid, Addr pc, bool taken, void *&bp_history,
+                                                    );
+         }
+
+-        loopPredictor->condBranchUpdate(tid, pc, taken,
+-                                        bi->tageBranchInfo->tagePred,
+-                                        bi->lpBranchInfo, instShiftAmt);
++        if (useLoop)
++            loopPredictor->condBranchUpdate(tid, pc, taken,
++                bi->tageBranchInfo->tagePred, bi->lpBranchInfo, instShiftAmt);
+
+         tage->condBranchUpdate(tid, pc, taken, bi->tageBranchInfo,
+                                nrand, target, bi->lpBranchInfo->predTaken);
+@@ -516,25 +538,24 @@ TAGE_SC_L::update(ThreadID tid, Addr pc, bool taken, void *&bp_history,
+     tage->updateHistories(tid, pc, false, taken, target,
+                           inst, bi->tageBranchInfo);
+
+-    if (statisticalCorrector) {
++    if (useSC) {
+         statisticalCorrector->updateHistories(pc, false, inst, taken,
+                                               bi->scBranchInfo, target,
+                                               tage->getPathHist(tid, false));
+     }
+-
+-
+-    delete bi;
+-    bp_history = nullptr;
+ }
+
+ void
+ TAGE_SC_L::squash(ThreadID tid, void * &bp_history)
+ {
+     TageSCLBranchInfo* bi = static_cast<TageSCLBranchInfo*>(bp_history);
+-    if (statisticalCorrector) {
++    if (useLoop && bi->tageBranchInfo->condBranch) {
++        loopPredictor->squash(tid, bi->lpBranchInfo);
++    }
++    if (useSC) {
+         statisticalCorrector->scRestoreHistState(bi->scBranchInfo);
+     }
+-    LTAGE::squash(tid, bp_history);
++    TAGE::squash(tid, bp_history);
+ }
+
+
+@@ -544,7 +565,7 @@ TAGE_SC_L::updateHistories(ThreadID tid, Addr pc, bool uncond, bool taken,
+                            void * &bp_history)
+ {
+     TAGE::updateHistories(tid, pc, uncond, taken, target, inst, bp_history);
+-    if (statisticalCorrector) {
++    if (useSC) {
+         auto bi = static_cast<TageSCLBranchInfo*>(bp_history);
+         statisticalCorrector->updateHistories(pc, true, inst, taken,
+                                               bi->scBranchInfo, target,
+diff --git a/src/cpu/pred/tage_sc_l.hh b/src/cpu/pred/tage_sc_l.hh
+index d5fa152f56..08a4a73f1e 100644
+--- a/src/cpu/pred/tage_sc_l.hh
++++ b/src/cpu/pred/tage_sc_l.hh
+@@ -183,7 +183,6 @@ class TAGE_SC_L: public LTAGE
+     void branchPlaceholder(ThreadID tid, Addr pc, bool uncond,
+                            void *&bp_history) override;
+
+-  protected:
+
+     struct TageSCLBranchInfo : public LTageBranchInfo
+     {
+@@ -201,12 +200,20 @@ class TAGE_SC_L: public LTAGE
+         }
+     };
+
++    void update(ThreadID tid, Addr pc, bool taken, TageSCLBranchInfo * &bi,
++                bool squashed, const StaticInstPtr & inst,
++                Addr target);
++
+     // more provider types
+     enum
+     {
+         SC = LAST_LTAGE_PROVIDER_TYPE + 1
+     };
+
++  protected:
++    const bool useLoop;
++    const bool useSC;
++
+ };
+
+ } // namespace branch_prediction
+diff --git a/src/cpu/pred/tage_sc_l_64KB.cc b/src/cpu/pred/tage_sc_l_64KB.cc
+index 667f1f2876..ee15e53995 100644
+--- a/src/cpu/pred/tage_sc_l_64KB.cc
++++ b/src/cpu/pred/tage_sc_l_64KB.cc
+@@ -41,6 +41,8 @@
+
+ #include "cpu/pred/tage_sc_l_64KB.hh"
+
++#include "debug/TageSCL.hh"
++
+ namespace gem5
+ {
+
+@@ -256,23 +258,13 @@ TAGE_SC_L_TAGE_64KB::handleAllocAndUReset(bool alloc, bool taken,
+         for (int j = 0; j < 2; ++j) {
+             int i = ((j == 0) ? I : (I ^ 1)) + 1;
+             if (noSkip[i]) {
+-                if (gtable[i][bi->tableIndices[i]].u == 0) {
+-                    int8_t ctr = gtable[i][bi->tableIndices[i]].ctr;
+-                    if (abs (2 * ctr + 1) <= 3) {
+-                        gtable[i][bi->tableIndices[i]].tag = bi->tableTags[i];
+-                        gtable[i][bi->tableIndices[i]].ctr = taken ? 0 : -1;
++                auto n = allocateEntry(i, bi, taken);
++                if (n > 0) {
+                         numAllocated++;
+                         maxAllocReached = (numAllocated == maxNumAlloc);
+                         I += 2;
+                         break;
+-                    } else {
+-                        if (gtable[i][bi->tableIndices[i]].ctr > 0) {
+-                            gtable[i][bi->tableIndices[i]].ctr--;
+-                        } else {
+-                            gtable[i][bi->tableIndices[i]].ctr++;
+-                        }
+-                    }
+-                } else {
++                } else if (n < 0) {
+                     penalty++;
+                 }
+             }
+@@ -287,6 +279,28 @@ TAGE_SC_L_TAGE_64KB::handleAllocAndUReset(bool alloc, bool taken,
+     handleUReset();
+ }
+
++int
++TAGE_SC_L_TAGE_64KB::allocateEntry(int idx, TAGEBase::BranchInfo* bi, bool taken)
++{
++    if (gtable[idx][bi->tableIndices[idx]].u != 0)
++        return -1;
++
++    int8_t ctr = gtable[idx][bi->tableIndices[idx]].ctr;
++    if (abs (2 * ctr + 1) > 3) {
++        if (ctr > 0)
++            gtable[idx][bi->tableIndices[idx]].ctr--;
++        else
++            gtable[idx][bi->tableIndices[idx]].ctr++;
++        return 0;
++    }
++
++    gtable[idx][bi->tableIndices[idx]].tag = bi->tableTags[idx];
++    gtable[idx][bi->tableIndices[idx]].ctr = (taken) ? 0 : -1;
++
++    return 1;
++}
++
++
+ void
+ TAGE_SC_L_TAGE_64KB::handleTAGEUpdate(Addr branch_pc, bool taken,
+                                       TAGEBase::BranchInfo *bi)
+@@ -313,28 +327,49 @@ TAGE_SC_L_TAGE_64KB::handleTAGEUpdate(Addr branch_pc, bool taken,
+             gtable[bi->hitBank][bi->hitBankIndex].u = 0;
+         }
+
+-        if (bi->altTaken == taken) {
+-            if (bi->altBank > 0) {
+-                int8_t ctr = gtable[bi->altBank][bi->altBankIndex].ctr;
+-                if (abs (2 * ctr + 1) == 7) {
+-                    if (gtable[bi->hitBank][bi->hitBankIndex].u == 1) {
+-                        if (bi->longestMatchPred == taken) {
+-                          gtable[bi->hitBank][bi->hitBankIndex].u = 0;
+-                        }
+-                    }
+-                }
++        if (isNotUseful(taken, bi)) {
++            if (gtable[bi->hitBank][bi->hitBankIndex].u > 0) {
++                gtable[bi->hitBank][bi->hitBankIndex].u--;
+             }
+         }
+     } else {
+         baseUpdate(branch_pc, taken, bi);
+     }
+
+-    if ((bi->longestMatchPred != bi->altTaken) &&
+-        (bi->longestMatchPred == taken) &&
+-        (gtable[bi->hitBank][bi->hitBankIndex].u < (1 << tagTableUBits) -1)) {
++    if (isUseful(taken, bi)) {
++        if(gtable[bi->hitBank][bi->hitBankIndex].u < ((1 << tagTableUBits) -1)) {
+             gtable[bi->hitBank][bi->hitBankIndex].u++;
+     }
+ }
++}
++
++bool
++TAGE_SC_L_TAGE_64KB::isUseful(bool taken, TAGEBase::BranchInfo* bi) const
++{
++    // If the longest prediction is correct but the alternate
++    // prediction is wrong the longest is useful.
++    return (bi->longestMatchPred != bi->altTaken) &&
++           (bi->longestMatchPred == taken);
++}
++
++bool
++TAGE_SC_L_TAGE_64KB::isNotUseful(bool taken, TAGEBase::BranchInfo* bi) const
++{
++    // If both the longest and alternate predictions where correct
++    // we can possible free the longest entry to use it for other
++    // predictions.
++    if ((bi->altTaken == taken) && (bi->longestMatchPred == taken)) {
++        // We only clear if the alternate prediction has a
++        // high confidence.
++        if (bi->altBank > 0) {
++            int8_t ctr = gtable[bi->altBank][bi->altBankIndex].ctr;
++            if (abs (2 * ctr + 1) == 7) {
++                return true;
++            }
++        }
++    }
++    return false;
++}
+
+ TAGE_SC_L_64KB::TAGE_SC_L_64KB(const TAGE_SC_L_64KBParams &params)
+   : TAGE_SC_L(params)
+diff --git a/src/cpu/pred/tage_sc_l_64KB.hh b/src/cpu/pred/tage_sc_l_64KB.hh
+index 1b3d840643..6004306abd 100644
+--- a/src/cpu/pred/tage_sc_l_64KB.hh
++++ b/src/cpu/pred/tage_sc_l_64KB.hh
+@@ -69,8 +69,13 @@ class TAGE_SC_L_TAGE_64KB : public TAGE_SC_L_TAGE
+     void handleAllocAndUReset(
+         bool alloc, bool taken, TAGEBase::BranchInfo *bi, int nrand) override;
+
++    int allocateEntry(int idx, TAGEBase::BranchInfo* bi, bool taken) override;
++
+     void handleTAGEUpdate(
+         Addr branch_pc, bool taken, TAGEBase::BranchInfo *bi) override;
++
++    virtual bool isUseful(bool taken, TAGEBase::BranchInfo* bi) const;
++    virtual bool isNotUseful(bool taken, TAGEBase::BranchInfo* bi) const;
+ };
+
+ class TAGE_SC_L_64KB_StatisticalCorrector : public StatisticalCorrector

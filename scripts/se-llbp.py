@@ -55,6 +55,7 @@ from m5.objects import (
     ConditionalPredictor,
     BranchPredictor,
     LLBP,
+    LLBPX,
     LLBP_TAGE_64KB,
 )
 
@@ -79,11 +80,9 @@ isa_choices = {
 }
 
 workloads = {
-    "hello": {
-        "Arm": "arm-hello64-static",
-        "X86": "x86-hello64-static",
-        "RISCV": "riscv-hello",
-    },
+    "Arm": "arm-hello64-static",
+    "X86": "x86-hello64-static",
+    "RISCV": "riscv-hello",
 }
 
 cpu_types = {
@@ -101,7 +100,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--isa",
     type=str,
-    default="ARM",
+    default="Arm",
     help="The ISA to simulate.",
     choices=isa_choices.keys(),
 )
@@ -138,7 +137,7 @@ processor = SimpleProcessor(
     isa=isa_choices[args.isa],
     num_cores=1,
 )
-    
+
 
 def predictor_map(predictor_name: str) -> ConditionalPredictor:
     match predictor_name:
@@ -152,49 +151,17 @@ def predictor_map(predictor_name: str) -> ConditionalPredictor:
                     logTagTableSize = 13
                 ),
             )
-
         case "LLBP":
             cbp = LLBP(
                 base=TAGE_SC_L_64KB(
                     tage=LLBP_TAGE_64KB(),
                 ),
-                rcrType=3,
-                rcrWindow=8,
-                rcrDist=4,
-                rcrShift=2,
-                backingStorageCapacity=14000,
-                patternBufferCapacity=64,
-                patternBufferAssoc=4,
-                patternSetBankBits=10,
-
-                patternSetCapacity=16,
-                patternSetAssoc=4,
-                rcrTagWidth=14,
-                backingStorageLatency=6,
-                patterTagBits = 13,
-                lightningPredEnabled=True,
-                lightningPredCutoff=0
             )
         case "LLBPX":
-            cbp = LLBP(
+            cbp = LLBPX(
                 base=TAGE_SC_L_64KB(
                     tage=LLBP_TAGE_64KB(),
                 ),
-                rcrType=3,
-                rcrWindow=8,
-                rcrDist=4,
-                rcrShift=2,
-                backingStorageCapacity=1400000,
-                patternBufferCapacity=64,
-                patternBufferAssoc=4,
-                patternSetBankBits=10,
-
-                patternSetCapacity=0,
-                patternSetAssoc=0,
-                rcrTagWidth=31,
-                backingStorageLatency=6,
-                patterTagBits = 40,
-
             )
         case _: raise ValueError(f"Unsupported BP: {args.bp}")
     return cbp
@@ -222,10 +189,7 @@ board = SimpleBoard(
     ),
 )
 
-print(
-    f"Running {args.workload} on {args.isa}, "
-    f"BP: {args.bp}"
-)
+print(f"Running BP: {args.bp} with {args.isa}")
 
 
 # Here we set the workload. In this case we want to run a simple "Hello World!"
@@ -233,7 +197,7 @@ print(
 # download the binary from the gem5 Resources cloud bucket if it's not already
 # present.
 board.set_se_binary_workload(
-    obtain_resource(workloads[args.workload][args.isa])
+    obtain_resource(workloads[args.isa])
 )
 
 # Lastly we run the simulation.

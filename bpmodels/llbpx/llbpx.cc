@@ -1,6 +1,6 @@
 /* MIT License
  *
- * Copyright (c) 2024 David Schall and EASE lab
+ * Copyright (c) 2024 David Schall
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -104,7 +104,7 @@ LLBPX::LLBPX(LLBPXConfig cfg)
     for (int i = 0; i < nW; i++) {
         WSr[WS[i]] = i;
     }
-    
+
     int mllbp[MAXNHIST];
     for (int i = 1; i <= nhist; i++) {
         mllbp[i] = (i%2) ? m[i] - 1 : m[i];
@@ -465,13 +465,13 @@ void LLBPX::llbpPredict(uint64_t pc) {
 
     auto ctx_key = rcr.getCCID(pc, WS[wi]);
 
-    PRINTIF(COND2,"%i L2Predict: W:%i, %lx\n", branchCount, WS[wi], ctx_key);
+    PRINTIF(COND2,"%lu L2Predict: W:%i, %lx\n", branchCount, WS[wi], ctx_key);
     HitContext = llbpStorage.get(ctx_key);
 
     if (HitContext) {
         for (int i = nhist; i > 0; i--) {
             if (NOSKIP[i]) {
-            
+
                 llbpEntry = HitContext->patterns.get(KEY[i]);
 
                 if (llbpEntry) {
@@ -575,7 +575,7 @@ void LLBPX::llbpUpdate(uint64_t pc, bool resolveDir, bool predDir) {
                 auto ci = cit.insert(rcr.getBaseCtx());
                 if (ci->fullPatternSets < 2)
                     ci->fullPatternSets++;
-#endif 
+#endif
 
             }
 #endif
@@ -591,7 +591,7 @@ void LLBPX::llbpUpdate(uint64_t pc, bool resolveDir, bool predDir) {
                 auto ci = cit.insert(rcr.getBaseCtx());
                 if (ci->fullPatternSets > 0)
                     ci->fullPatternSets--;
-#endif 
+#endif
 
             }
 #endif
@@ -646,7 +646,7 @@ bool LLBPX::llbpAllocate(int histLen, uint64_t pc, bool taken) {
     if (!fltTables.contains(histLen)) {
         return false;
     }
-    
+
 #endif //FILTER_TABLES
 
     // Create context key and pattern key
@@ -659,44 +659,30 @@ bool LLBPX::llbpAllocate(int histLen, uint64_t pc, bool taken) {
     ci = cit.get(rcr.getBaseCtx());
 #else
     ci = &baseContexts[rcr.getBaseCtx()];
-#endif 
+#endif
 
 
 
 
     if (ci) {
-        
+
         if ((ci->fullPatternSets >= 0) &&
             (ci->wi < nW-1)) {
 
-            auto wm = ci->hlsum / (double)ci->totAllocPtrns;
             const int th = 7;
 
             if (ci->allocVsDrop > th) {
                 if (ci->wi == 0) {
                     ci->wi = nW-1;
-                    // llbpstats.wIncrease++;
                     ci->allocVsDrop = 0;
                 } else if (ci->wi == nW-1) {
                     ci->wi = 0;
-                    // llbpstats.wDecrease++;
                     ci->allocVsDrop = 0;
                 }
             }
         }
 
-
-        // ci->allocVsDrop++;
-        ci->allocPtrns++;
-        ci->totAllocPtrns++;
-        if (histLen > 15) {
-            ci->allocPtrnsLong++;
-        }
-
-
-
         ////////////////////////////////////////////
-
 
         bool drop = false;
 
@@ -710,8 +696,6 @@ bool LLBPX::llbpAllocate(int histLen, uint64_t pc, bool taken) {
 
             if (ci->wi == nW-1) {
                 ci->allocVsDrop++;
-                // llbpstats.allocDropShorter++;
-                ci->allocDropShorter++;
             }
         } else {
 
@@ -723,8 +707,6 @@ bool LLBPX::llbpAllocate(int histLen, uint64_t pc, bool taken) {
 
             if (ci->wi == 0) {
                 ci->allocVsDrop++;
-                // llbpstats.allocDropLonger++;
-                ci->allocDropLonger++;
             }
 
         }
@@ -759,9 +741,6 @@ bool LLBPX::llbpAllocate(int histLen, uint64_t pc, bool taken) {
 
     wAlloc.insert(ci->wi);
     ctx_key = rcr.getCCID(pc, WS[ci->wi]);
-    if (!llbpStorage.get(ctx_key)) {
-        ci->allocCtxs++;
-    }
     }
 #endif
 
@@ -1318,7 +1297,7 @@ uint64_t LLBPX::RCR::getCCID(uint64_t pc) {
         wi = it->second.wi;
     }
 #endif
-    return calcHash(bb[0], parent.WS[wi], D, S) 
+    return calcHash(bb[0], parent.WS[wi], D, S)
          & ((1ULL << uint64_t(CTWidth)) - 1);
 #endif
 
@@ -1326,11 +1305,11 @@ uint64_t LLBPX::RCR::getCCID(uint64_t pc) {
 }
 
 uint64_t LLBPX::RCR::getCCID(uint64_t pc, int w) {
-    return calcHash(bb[0], w, D, S) 
+    return calcHash(bb[0], w, D, S)
          & ((1ULL << uint64_t(CTWidth)) - 1);
 }
 uint64_t LLBPX::RCR::getPCID(int w) {
-    return calcHash(bb[0], w, 0, S) 
+    return calcHash(bb[0], w, 0, S)
          & ((1ULL << uint64_t(CTWidth)) - 1);
 }
 
@@ -1539,7 +1518,7 @@ void LLBPX::PrintStat(double instr) {
 
         numContexts, nCtx, nCtx / (double)numContexts,
         nCtxUseful, nCtxUseful / (double)numContexts,
-        llbpstats.ptrnEvict, llbpstats.ctxEvict 
+        llbpstats.ptrnEvict, llbpstats.ctxEvict
         );
 
 #define PRINTHIST

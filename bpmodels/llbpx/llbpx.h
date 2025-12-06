@@ -1,6 +1,6 @@
 /* MIT License
  *
- * Copyright (c) 2024 David Schall and EASE lab
+ * Copyright (c) 2024 David Schall
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -186,7 +186,7 @@ class LLBPX : public TageSCL {
 
         LLBPStorage(int n_ctx, int n_patterns, int ctx_assoc, int ptrn_assoc)
           : BaseCache<uint64_t, Context>(n_ctx, ctx_assoc),
-            n_contexts(n_ctx), 
+            n_contexts(n_ctx),
             n_patterns(n_patterns), _ptrn_assoc(ptrn_assoc)
         {
         }
@@ -462,8 +462,8 @@ class LLBPX : public TageSCL {
     const int maxAlloc = 2;
     const int adaptThreshold;
     const int histLenThreshold;
-    static const int nW = 6;
-    const int WS[nW] = {2,4,8,16,32,64};
+    static const int nW = 2;
+    const int WS[nW] = {2,64};
 
     const int BCTWidth;
     std::unordered_map<int,int> WSr;
@@ -471,26 +471,9 @@ class LLBPX : public TageSCL {
     struct ContextInfo {
         int correct = 0;
         int incorrect = 0;
-        int llbpUseful = 0;
-        int llbpProv = 0;
-        int tageProv = 0;
-        int bimProv = 0;
-        int nPatterns = 0;
-        int nUsefulPatterns = 0;
         int wi = 0;
-        int allocPtrns = 0;
-        int totAllocPtrns = 0;
-        int allocPtrnsLong = 0;
-        int allocPge13 = 0;
-        int allocPge15 = 0;
-        int allocPge17 = 0;
-        int allocCtxs = 0;
         int fullPatternSets = 0;
-        int allocDropLonger = 0;
-        int allocDropShorter = 0;
         int allocVsDrop = 0;
-        uint64_t hlsum = 0;
-        uint64_t coverSum = 0;
     };
     std::unordered_map<uint64_t,ContextInfo> baseContexts;
 

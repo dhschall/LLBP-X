@@ -41,3 +41,10 @@ SConscript
 Assmann
 Caeden
 Jennrich
+SCons
+cp
+cpu
+pred
+src
+llbpx
+scons
