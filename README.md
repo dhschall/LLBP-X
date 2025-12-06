@@ -139,13 +139,14 @@ scons build/ARM/gem5.opt -j`nproc`
 The `scripts` folder contains a simple configuration script (`se-llbp.py`) to run a hello world program in gem5's syscall emulation mode. You can run the simulation as follows:
 
 ```bash
+cd gem5
 ./build/ARM/gem5.opt ./../scripts/se-llbp.py --bp=LLBPX
 ```
 This will run the hello world program with LLBP-X as the branch predictor. Can change the `--bp` argument to `LLBPX`, `LLBP`, or `TSL64k` to simulate the other branch predictor models.
 
 To quickly run all models and collect the branch mispredictions run:
 ```bash
-./scripts/eval_all_gem5.sh
+./scripts/run_all_gem5.sh
 ```
 It will simulate all three models and print the branch mispredictions at the end.
 
