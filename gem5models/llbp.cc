@@ -817,9 +817,7 @@ LLBP::adaptContextDepth(LLBPBranchInfo *bi, int histLen)
     if ((ci->fullPatternSets >= 0) &&
         (ci->wi < nW-1)) {
 
-        const int th = 7;
-
-        if (ci->allocVsDrop > th) {
+        if (ci->allocVsDrop > adaptThreshold) {
             if (ci->wi == 0) {
                 ci->wi = nW-1;
                 ci->allocVsDrop = 0;
