@@ -80,8 +80,7 @@ BRMODELS="${BRMODELS} llbp"
 BRMODELS="${BRMODELS} llbp-timing"
 BRMODELS="${BRMODELS} llbpx"
 BRMODELS="${BRMODELS} llbpx-timing"
-BRMODELS="${BRMODELS} tage64kscl"
-BRMODELS="${BRMODELS} tage512kscl"
+BRMODELS="${BRMODELS} llbpx-optw"
 
 
 commands=()
@@ -96,10 +95,15 @@ for model in $BRMODELS; do
         OUTDIR="${OUT}/${fn}/"
         mkdir -p $OUTDIR
 
+
+        if [[ "$model" == "llbpx-optw" ]]; then
+            TLOAD="--tableload \"$TRACE_DIR/$fn-bestWbCtx_patterns_ODH_t16x14k_CT14_D4_264.csv\""
+        fi
+
         CMD="\
             ./build/predictor $TRACE \
                 --model ${model} \
-                ${FLAGS} \
+                ${FLAGS} ${TLOAD} \
                 -w ${N_WARM} -n ${N_SIM} \
                 --output "${OUTDIR}/${model}-${POSTFIX}" \
                 > $OUTDIR/${model}-${POSTFIX}.txt 2>&1"

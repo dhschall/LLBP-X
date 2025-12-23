@@ -55,6 +55,7 @@ class LLBPX : public TageSCL {
                          bool predDir, uint64_t branchTarget) override;
     void TrackOtherInst(uint64_t PC, OpType opType, bool taken,
                         uint64_t branchTarget) override;
+    void LoadTables(std::string filename) override;
     void PrintStat(double NUMINST) override;
     void tick() override;
     void btbMiss() override;
@@ -446,6 +447,7 @@ class LLBPX : public TageSCL {
     // functionality. Prefetching is only modelled if `simulateTiming`
     // is set to true.
     const bool simulateTiming;
+    const bool optW;
 
     void prefetch();
     void tickPrefetchQueue();
@@ -602,6 +604,7 @@ struct LLBPXConfig {
     int BCTWidth = 16;
 
     bool simulateTiming = false;
+    bool optW = false;
     int accessDelay = 4;
 
 
@@ -610,13 +613,13 @@ struct LLBPXConfig {
            "CtrWidth=%i, ReplCtrWidth=%i, CtxReplCtrWidth=%i, pbSize=%i, "
            "TTWidth=%i, CTWidth=%i, adaptThreshold=%i, histLenThreshold=%i, "
            "CitSize=%i, CitAssoc=%i, BctxTTWidth=%i, "
-           "simMispFlush=%i, accessDelay=%i, "
+           "simMispFlush=%i, accessDelay=%i, optW=%i"
            "\n ",
            numPatterns, numContexts, ctxAssoc, ptrnAssoc,
            CtrWidth, ReplCtrWidth, CtxReplCtrWidth, pbSize,
            TTWidth, CTWidth, adaptThreshold, histLenThreshold,
            CitSize, CitAssoc, BCTWidth,
-           simulateTiming, accessDelay
+           simulateTiming, accessDelay, optW
            );
   }
 };
@@ -661,6 +664,26 @@ class LLBPXTSCL64kTiming : public LLBPX {
             })
     {}
 };
+
+// The LLBP predictor with simulating the prefetch latency.
+class LLBPXTSCL64kTimingOptW : public LLBPX {
+   public:
+    LLBPXTSCL64kTimingOptW(void)
+        : LLBPX(LLBPXConfig
+            {
+                .tsclConfig = TSCLConfig
+                {
+                    .tageConfig = Tage64kConfig,
+                    .useSC = true,
+                    .useLoop = true
+                },
+                // .simulateTiming = false,
+                .simulateTiming = true,
+                .optW = true,
+            })
+    {}
+};
+
 
 
 };  // namespace LLBP

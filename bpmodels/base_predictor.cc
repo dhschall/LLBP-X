@@ -22,6 +22,8 @@ BasePredictor* CreateBP(std::string bp_name)
         return new LLBP::LLBPTageSCL64kTiming();
     } else if (bp_name == "llbpx") {
         return new LLBP::LLBPXTSCL64k();
+    } else if (bp_name == "llbpx-optw") {
+        return new LLBP::LLBPXTSCL64kTimingOptW();
     } else if (bp_name == "llbpx-timing") {
         return new LLBP::LLBPXTSCL64kTiming();
     } else {

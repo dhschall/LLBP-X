@@ -106,6 +106,7 @@ UINT64 instruction_count = 0;
 std::string brmodel;
 std::string outfile;
 std::string trace_path;
+std::string tableload;
 
 bool tabledump = false;
 
@@ -165,6 +166,7 @@ bool process_command_line(int argc, char** argv)
           ("output,o",     po::value<std::string>(&outfile), "output file")
           ("simulate-btb",  po::bool_switch(&simulateBTB)->default_value(false), "Simulate BTB")
           ("tabledump,t",  po::bool_switch(&tabledump)->default_value(false), "dump TAGE tables")
+          ("tableload,l",  po::value<std::string>(&tableload)->default_value(""), "load TAGE tables")
           ("maxbrinst,m",  po::value<uint64_t>(&max_br_instruction)->default_value(dMAX), "max number of branches to simulate")
           ("inst-sim,n",   po::value<uint64_t>(&sim_instructions)->default_value(DEF_SIM), "max number of instructions to simulate")
           ("inst-warm,w",  po::value<uint64_t>(&warmup_instructions)->default_value(DEF_WARMUP), "number to instructions to warmup")
@@ -234,6 +236,10 @@ int main(int argc, char* argv[]) {
     if (!trace.open(trace_path)) {
         printf("Error opening trace file: %s\n", trace_path.c_str());
         exit(-1);
+    }
+
+    if (tableload != "") {
+        brpred->LoadTables(tableload);
     }
 
     BTB btb;

@@ -52,7 +52,7 @@ namespace LLBP {
 #define ADAPTIVE_W_CTX
 #define ADAPTIVE_W_BY_CONF
 #define ADAPTIVE_W_REALISTIC
-
+#define USE_BESTW_CTX
 
 LLBPX::LLBPX(LLBPXConfig cfg)
     : TageSCL(cfg.tsclConfig),
@@ -69,6 +69,7 @@ LLBPX::LLBPX(LLBPXConfig cfg)
     CtxReplCtrWidth(cfg.CtxReplCtrWidth),
 
     simulateTiming(cfg.simulateTiming),
+    optW(cfg.optW),
     warmup(false),
     accessDelay(cfg.accessDelay),
     adaptThreshold(cfg.adaptThreshold),
@@ -423,16 +424,24 @@ void LLBPX::llbpPredict(uint64_t pc) {
     llbp = {};
 
     int wi = 0;
+    auto base_ctx = rcr.getBaseCtx();
 
 #if defined(ADAPTIVE_W_CTX)
-    auto base_ctx = rcr.getBaseCtx();
-#ifdef ADAPTIVE_W_REALISTIC
-    auto ci = cit.get(base_ctx);
-    wi = ci ? ci->wi : 0;
 
+    if (optW) {
+        auto it = baseContexts.find(base_ctx);
+        if (it != baseContexts.end()) {
+            wi = it->second.wi;
+        }
+    } else {
+#ifdef ADAPTIVE_W_REALISTIC
+        auto ci = cit.get(base_ctx);
+        wi = ci ? ci->wi : 0;
 #else
-    wi = baseContexts[base_ctx].wi;
+        wi = baseContexts[base_ctx].wi;
 #endif
+    }
+
 #endif
 
 
@@ -569,7 +578,7 @@ void LLBPX::llbpUpdate(uint64_t pc, bool resolveDir, bool predDir) {
             ctrupdate(HitContext->replace, true, CtxReplCtrWidth);
 
 #ifdef ADAPTIVE_W_BY_CONF
-            if (HitContext->confidentPtrns == adaptThreshold) {
+            if (!optW && (HitContext->confidentPtrns == adaptThreshold)) {
                 baseContexts[rcr.getBaseCtx()].fullPatternSets++;
 #ifdef ADAPTIVE_W_REALISTIC
                 auto ci = cit.insert(rcr.getBaseCtx());
@@ -585,7 +594,7 @@ void LLBPX::llbpUpdate(uint64_t pc, bool resolveDir, bool predDir) {
             // entry became low confident
             ctrupdate(HitContext->replace, false, CtxReplCtrWidth);
 #ifdef ADAPTIVE_W_BY_CONF
-            if (HitContext->confidentPtrns == adaptThreshold-1) {
+            if (!optW && (HitContext->confidentPtrns == adaptThreshold-1)) {
                 baseContexts[rcr.getBaseCtx()].fullPatternSets--;
 #ifdef ADAPTIVE_W_REALISTIC
                 auto ci = cit.insert(rcr.getBaseCtx());
@@ -652,13 +661,12 @@ bool LLBPX::llbpAllocate(int histLen, uint64_t pc, bool taken) {
     // Create context key and pattern key
     auto ctx_key = rcr.getCCID(pc);
     auto k = KEY[histLen];
+    int wi = 0;
 
     ContextInfo* ci = nullptr;
 #ifdef ADAPTIVE_W_CTX
-#ifdef ADAPTIVE_W_REALISTIC
-    ci = cit.get(rcr.getBaseCtx());
-#else
-    ci = &baseContexts[rcr.getBaseCtx()];
+    if (!optW)
+        ci = cit.get(rcr.getBaseCtx());
 #endif
 
 
@@ -738,11 +746,22 @@ bool LLBPX::llbpAllocate(int histLen, uint64_t pc, bool taken) {
         return false;
     }
 
+    wi = ci->wi;
 
-    wAlloc.insert(ci->wi);
-    ctx_key = rcr.getCCID(pc, WS[ci->wi]);
+    }
+
+#ifdef USE_BESTW_CTX
+    if (optW) {
+        auto base_ctx = rcr.getBaseCtx();
+        auto it = baseContexts.find(base_ctx);
+        if (it != baseContexts.end()) {
+            wi = it->second.wi;
+        }
     }
 #endif
+
+    wAlloc.insert(wi);
+    ctx_key = rcr.getCCID(pc, WS[wi]);
 
 
     auto ctx = allocateNewContext(pc, ctx_key);
@@ -879,7 +898,8 @@ void LLBPX::evictPattern(Context* ctx, Pattern* ptrn, bool ctx_evict) {
         ctx->confidentPtrns--;
 #ifdef ADAPTIVE_W_BY_CONF
         if (ctx->confidentPtrns == adaptThreshold-1) {
-            baseContexts[rcr.getBaseCtx()].fullPatternSets--;
+            if (baseContexts.contains(rcr.getBaseCtx()))
+                baseContexts[rcr.getBaseCtx()].fullPatternSets--;
         }
 #endif
     }
@@ -915,6 +935,16 @@ void LLBPX::prefetch() {
     ctx_key = rcr.getPCID();
 
 #endif
+
+
+#ifdef USE_BESTW_CTX
+    if (optW) {
+        auto itt = baseContexts.find(base_ctx);
+        auto W = itt != baseContexts.end() ? WS[itt->second.wi] : 0;
+        ctx_key = rcr.getPCID(W);
+    }
+#endif
+
     PRINTIF(COND2,"%i/%i Prefetch: %lx -> ", ticks, branchCount, ctx_key);
 
 
@@ -1077,7 +1107,7 @@ void LLBPX::updateStats(bool resolveDir, bool predDir, uint64_t pc) {
 
                 llbpEntry->useful++;
                 HitContext->useful++;
-#if defined(ADAPTIVE_W_CTX)
+#if defined(ADAPTIVE_W_CTX) || defined(USE_BESTW_CTX)
                 wUseful.insert(llbp.wi);
 #endif
 
@@ -1387,7 +1417,7 @@ bool LLBPX::RCR::update(uint64_t pc, OpType opType, bool taken) {
         // The prefetch context.
         ctxs.pcid = calcHash(bb[0], W, 0, S);
         // The base context.
-        const int n = 2;
+        const int n = parent.optW ? 1 : 2;
         ctxs.bcid = calcHash(bb[0], n, D, S);
         ctxs.pbcid = calcHash(bb[0], n, 0, S);
     }
@@ -1413,6 +1443,56 @@ void LLBPX::setState(bool _warmup) {
 }
 
 
+void
+LLBPX::LoadTables(std::string filename) {
+
+// Open csv file and read one branch line by line.
+    std::ifstream file(filename);
+    std::string line;
+    int i = 0;
+
+#if 1
+    // Read Best W ------------------------------------
+
+    while (std::getline(file, line)) {
+        if (line[0] == ',') continue;
+        if (line[0] == 'c') continue;
+
+        std::stringstream ss(line);
+        std::string tmp;
+
+        std::getline(ss, tmp, ',');
+        uint64_t ctxkey = std::stoull(tmp);
+
+        std::getline(ss, tmp, ',');
+        uint64_t pattern = std::stoull(tmp);
+
+        std::getline(ss, tmp, ',');
+        int table = std::stoi(tmp);
+
+        std::getline(ss, tmp, ',');
+        uint64_t pc = std::stoull(tmp);
+
+        std::getline(ss, tmp, ',');
+        int bestW = std::stoi(tmp);
+
+        std::getline(ss, tmp, ',');
+        uint64_t bctx = std::stoull(tmp);
+
+        bctx &= ((1ULL << uint64_t(BCTWidth)) - 1);
+
+        bestWmap[bctx] = bestW;
+        baseContexts[bctx].wi = WSr[bestW];
+
+        i++;
+        // Do something with the data
+    }
+    printf("Loading %i useful entries %s\n", i, filename.c_str());
+    return;
+#endif
+
+
+}
 
 void LLBPX::PrintStat(double instr) {
 
