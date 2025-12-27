@@ -1481,7 +1481,6 @@ LLBPX::LoadTables(std::string filename) {
 
         bctx &= ((1ULL << uint64_t(BCTWidth)) - 1);
 
-        bestWmap[bctx] = bestW;
         baseContexts[bctx].wi = WSr[bestW];
 
         i++;
