@@ -81,6 +81,8 @@ BRMODELS="${BRMODELS} llbp-timing"
 BRMODELS="${BRMODELS} llbpx"
 BRMODELS="${BRMODELS} llbpx-timing"
 BRMODELS="${BRMODELS} llbpx-optw"
+BRMODELS="${BRMODELS} tage64kscl"
+BRMODELS="${BRMODELS} tage512kscl"
 
 
 commands=()
